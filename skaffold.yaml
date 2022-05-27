@@ -1,0 +1,21 @@
+apiVersion: skaffold/v2beta27
+kind: Config
+
+metadata:
+  name: supervizor
+
+build:
+  artifacts:
+    - image: kevinsieverding/supervizor
+      context: web-app
+
+    - image: kevinsieverding/supervizor-spark
+      context: spark-app
+
+    - image: kevinsieverding/supervizor-simulator
+      context: simulator-app
+
+deploy:
+  kubectl:
+    manifests:
+      - k8s/*.yaml
