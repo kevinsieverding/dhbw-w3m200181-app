@@ -8,10 +8,6 @@ build:
   artifacts:
     - image: kevinsieverding/supervizor
       context: web-app
-
-    - image: kevinsieverding/supervizor-spark
-      context: spark-app
-
     - image: kevinsieverding/supervizor-simulator
       context: simulator-app
 
