@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: supervizor-simulator
+  labels:
+    app: supervizor-simulator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: supervizor-simulator
+  template:
+    metadata:
+      labels:
+        app: supervizor-simulator
+    spec:
+      containers:
+        - name: supervizor-simulator
+          image: kevinsieverding/supervizor-simulator
