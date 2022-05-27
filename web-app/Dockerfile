@@ -1,12 +1,15 @@
-FROM denoland/deno:alpine
+FROM node:14-slim
 LABEL maintainer="Kevin Sieverding <kontakt@kevinsieverding.de>"
 
 EXPOSE 8080
 
 WORKDIR /app
+COPY package.json package-lock.json /app/
+RUN npm ci --no-optional
+RUN npm cache clean --force
 
-USER deno
+COPY *.js /app/
 
-ADD . .
+ENTRYPOINT ["node", "index.js"]
 
-CMD ["run", "--allow-net", "index.js"]
+CMD [""]

@@ -1,11 +1,15 @@
-#! /usr/bin/env -S deno run --allow-net
+const express = require("express");
 
-import { serve } from "https://deno.land/std@0.141.0/http/server.ts";
+const app = express();
+
+app.get("/", (req, res) => {
+  res.send("Hello, World!");
+});
 
 const port = 8080;
 
-function handler(req) {
-  return new Response("Hello, World!");
-}
-
-await serve(handler, { port });
+app.listen(port, () => {
+  console.log(
+    `Web server listening at ${port}!`,
+  );
+});
