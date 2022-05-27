@@ -18,9 +18,7 @@ async function sendMessage(data) {
   //Send message
   let result = await producer.send({
     topic: "test-topic",
-    messages: [
-      { value: JSON.stringify(data) },
-    ],
+    messages: [{ value: JSON.stringify(data) }],
   });
 
   // console.log("Send result:", result);
@@ -42,19 +40,19 @@ const maxTemp = 80;
 const tempInterval = 1000;
 
 setInterval(() => {
+  const message = {
+    value: JSON.stringify({
+      temperature: randn_bm(minTemp, maxTemp, 1).toFixed(
+        3,
+      ),
+      timestamp: Math.floor(new Date() / 1000),
+    }),
+  };
+  console.log(`Sending message: ${JSON.stringify(message)}`);
   producer.connect();
   producer.send({
     topic: temperatureTopic,
-    messages: [
-      {
-        value: JSON.stringify({
-          temperature: (Math.random() * (maxTemp - minTemp) + minTemp).toFixed(
-            3,
-          ),
-          timestamp: Math.floor(new Date() / 1000),
-        }),
-      },
-    ],
+    messages: [message],
   });
 }, tempInterval);
 
@@ -70,10 +68,10 @@ setInterval(() => {
     messages: [
       {
         value: JSON.stringify({
-          pressure: (Math.random() * (maxPressure - minPressure) + minPressure)
-            .toFixed(
-              2,
-            ),
+          pressure: (
+            Math.random() * (maxPressure - minPressure) +
+            minPressure
+          ).toFixed(2),
           timestamp: Math.floor(new Date() / 1000),
         }),
       },
@@ -93,14 +91,33 @@ setInterval(() => {
     messages: [
       {
         value: JSON.stringify({
-          pressure:
-            (Math.random() * (maxVibration - minVibration) + minVibration)
-              .toFixed(
-                3,
-              ),
+          pressure: (
+            Math.random() * (maxVibration - minVibration) +
+            minVibration
+          ).toFixed(3),
           timestamp: Math.floor(new Date() / 1000),
         }),
       },
     ],
   });
 }, vibrationInterval);
+
+// generate values with normal distribution
+// https://stackoverflow.com/a/49434653
+function randn_bm(min, max, skew) {
+  let u = 0, v = 0;
+  while (u === 0) u = Math.random(); //Converting [0,1) to (0,1)
+  while (v === 0) v = Math.random();
+  let num = Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+
+  num = num / 10.0 + 0.5; // Translate to 0 -> 1
+  if (num > 1 || num < 0) {
+    num = randn_bm(min, max, skew); // resample between 0 and 1 if out of range
+  } else {
+    num = Math.pow(num, skew); // Skew
+    num *= max - min; // Stretch to fill range
+    num += min; // offset to min
+  }
+
+  return num;
+}
