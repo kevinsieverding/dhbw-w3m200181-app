@@ -10,6 +10,8 @@ build:
       context: web-app
     - image: kevinsieverding/supervizor-simulator
       context: simulator-app
+    - image: kevinsieverding/supervizor-spark
+      context: spark-app
 
 deploy:
   kubectl:
