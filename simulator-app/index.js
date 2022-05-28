@@ -49,7 +49,7 @@ const tempInterval = 1000;
 setInterval(() => {
   const message = {
     value: JSON.stringify({
-      temperature: randn_bm(minTemp, maxTemp, 1).toFixed(
+      temperature: randn_bm(minTemp, maxTemp, 0.8).toFixed(
         3,
       ),
       timestamp: Math.floor(new Date() / 1000),
