@@ -24,7 +24,6 @@ consumer.connect();
 consumer.subscribe({
   topics: [
     "de.kevinsieverding.supervizor.temperature-warnings",
-    "de.kevinsieverding.supervizor.pressure-warnings",
   ],
   // fromBeginning: true,
 });
@@ -33,10 +32,6 @@ consumer.run({
     if (topic === "de.kevinsieverding.supervizor.temperature-warnings") {
       console.log(
         `Received temperature warning! Temperature was ${message.value.toString()} °C at ${message.key.toString()}`,
-      );
-    } else if (topic === "de.kevinsieverding.supervizor.pressure-warnings") {
-      console.log(
-        `Received pressure warning! Pressure was ${message.value.toString()} bar at ${message.key.toString()}`,
       );
     }
   },
