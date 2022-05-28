@@ -20,6 +20,8 @@ const consumer = kafka.consumer({
   groupId: `supervizor-simulator`,
 });
 
+const warnings = [];
+
 consumer.connect();
 consumer.subscribe({
   topics: [
@@ -33,14 +35,18 @@ consumer.run({
       console.log(
         `Received temperature warning! Temperature was ${message.value.toString()} °C at ${message.key.toString()}`,
       );
+      warnings.push({
+        timeframe: message.key.toString(),
+        temperature: message.value.toString(),
+      });
     }
   },
 });
 
 const app = express();
 
-app.get("/", (req, res) => {
-  res.send("Hello, World!");
+app.get("/warnings", (req, res) => {
+  res.send(JSON.stringify(warnings));
 });
 
 const port = 8080;
