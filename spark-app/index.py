@@ -3,31 +3,35 @@ from pyspark.sql.functions import *
 from pyspark.sql.types import (DecimalType, IntegerType, StringType,
                                StructType, TimestampType)
 
-windowDuration = "5 minutes"
-windowOffset = "1 minute"
+windowDuration = "1 minute"
+windowInterval = "1 minute"
 
 spark = SparkSession.builder.appName("supervizor-spark").getOrCreate()
 
 spark.sparkContext.setLogLevel("WARN")
 
+kafkaBootstrap = "my-cluster-kafka-bootstrap:9092"
+
+###############################################################################
+# TEMPERATURE
+###############################################################################
+
 # Read temperature readings from Kafka
-df = spark \
+temperatureDf = spark \
     .readStream \
     .format("kafka") \
-    .option("kafka.bootstrap.servers",
-            "my-cluster-kafka-bootstrap:9092") \
+    .option("kafka.bootstrap.servers", kafkaBootstrap) \
     .option("subscribe", "de.kevinsieverding.supervizor.temperature") \
-    .option("startingOffsets", "earliest") \
     .load()
 
-tempSchema = StructType()  \
+temperatureSchema = StructType()  \
     .add("temperature", DecimalType(precision=5, scale=3)) \
     .add("timestamp", IntegerType())
 
-df = df.select(
+temperatureDf = temperatureDf.select(
     from_json(
         column("value").cast("string"),
-        tempSchema
+        temperatureSchema
     ).alias("json")
 ).select(
     from_unixtime(column("json.timestamp"))
@@ -38,20 +42,29 @@ df = df.select(
     .withColumnRenamed("json.temperature", "temperature") \
     .withWatermark("parsed_timestamp", windowDuration)
 
-df = df.groupBy(
+temperatureDf = temperatureDf.groupBy(
     window(
         column("parsed_timestamp"),
         windowDuration,
-        windowOffset
+        windowInterval
     )
-).max("temperature")
+).max("temperature").withColumnRenamed("max(temperature)", "max-temp")
 
-consoleDump = df \
+temperatureDf = temperatureDf.where(col("max-temp") > 66)
+
+temperatureStream = temperatureDf \
+    .withColumnRenamed("window", "key").withColumnRenamed("max-temp", "value") \
+    .selectExpr("CAST(key AS STRING)", "CAST(value AS STRING)") \
     .writeStream \
-    .trigger(processingTime=windowOffset) \
-    .outputMode("update") \
-    .format("console") \
-    .option("truncate", "false") \
+    .trigger(processingTime=windowInterval) \
+    .format("kafka") \
+    .option("kafka.bootstrap.servers", kafkaBootstrap) \
+    .option("topic", "de.kevinsieverding.supervizor.temperature-warnings") \
+    .option("checkpointLocation", "/tmp/checkpoints") \
     .start()
+
+###############################################################################
+# END
+###############################################################################
 
 spark.streams.awaitAnyTermination()
