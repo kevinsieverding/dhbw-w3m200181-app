@@ -22,6 +22,8 @@ temperatureDf = spark \
     .format("kafka") \
     .option("kafka.bootstrap.servers", kafkaBootstrap) \
     .option("subscribe", "de.kevinsieverding.supervizor.temperature") \
+    .option("startingOffsets", "earliest") \
+    .option("failOnDataLoss", "false") \
     .load()
 
 temperatureSchema = StructType()  \
@@ -48,13 +50,23 @@ temperatureDf = temperatureDf.groupBy(
         windowDuration,
         windowInterval
     )
-).max("temperature").withColumnRenamed("max(temperature)", "max-temp")
+) \
+    .max("temperature").withColumnRenamed("max(temperature)", "maxTemperature") \
+    .where(col("maxTemperature") > 66) \
+    .selectExpr(
+        "CAST(window.start AS STRING) AS start",
+        "CAST(window.end AS STRING) AS end",
+        "maxTemperature AS temperature"
+)
 
-temperatureDf = temperatureDf.where(col("max-temp") > 66)
+consoleStream = temperatureDf \
+    .writeStream \
+    .trigger(processingTime=windowInterval) \
+    .format("console") \
+    .start()
 
 temperatureStream = temperatureDf \
-    .withColumnRenamed("window", "key").withColumnRenamed("max-temp", "value") \
-    .selectExpr("CAST(key AS STRING)", "CAST(value AS STRING)") \
+    .selectExpr("start AS key", "to_json(struct(*)) AS value") \
     .writeStream \
     .trigger(processingTime=windowInterval) \
     .format("kafka") \

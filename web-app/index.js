@@ -27,17 +27,19 @@ consumer.subscribe({
   topics: [
     "de.kevinsieverding.supervizor.temperature-warnings",
   ],
-  // fromBeginning: true,
+  fromBeginning: true,
 });
 consumer.run({
   eachMessage: async ({ topic, message }) => {
     if (topic === "de.kevinsieverding.supervizor.temperature-warnings") {
+      const payload = JSON.parse(message.value.toString());
       console.log(
-        `Received temperature warning! Temperature was ${message.value.toString()} °C at ${message.key.toString()}`,
+        `Received temperature warning: ${JSON.stringify(payload)}`,
       );
       warnings.push({
-        timeframe: message.key.toString(),
-        temperature: message.value.toString(),
+        start: payload.start,
+        end: payload.end,
+        temperature: payload.temperature,
       });
     }
   },
