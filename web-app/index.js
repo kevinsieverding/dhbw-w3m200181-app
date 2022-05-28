@@ -1,4 +1,11 @@
 const express = require("express");
+const process = require("process");
+
+// Catch interrupt signals to make the docker container killable via ctrl+c
+process.on("SIGNIT", () => {
+  console.log("Interrupted.");
+  process.exit(0);
+});
 
 const app = express();
 

@@ -1,4 +1,11 @@
 const { Kafka } = require("kafkajs");
+const process = require("process");
+
+// Catch interrupt signals to make the docker container killable via ctrl+c
+process.on("SIGNIT", () => {
+  console.log("Interrupted.");
+  process.exit(0);
+});
 
 const kafka = new Kafka({
   clientId: `simulator-${Math.random() * 10000}`,
