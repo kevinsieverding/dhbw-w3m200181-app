@@ -1,4 +1,3 @@
-#Begin: Configmap
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -32,8 +31,6 @@ spec:
       labels:
         app: my-mariadb
     spec:
-      # Mount the configmap volume
-      # This is an excerpt of deployment.spec.template.spec
       volumes:
         - name: init-volume
           configMap:
@@ -44,7 +41,6 @@ spec:
           volumeMounts:
             - name: init-volume
               mountPath: /docker-entrypoint-initdb.d/
-          # Set required environment variables to initialize the container
           env:
             - name: MARIADB_ROOT_PASSWORD
               value: "mysecretpw"
@@ -54,7 +50,6 @@ spec:
             - containerPort: 3306
 
 ---
-#Begin: Service
 apiVersion: v1
 kind: Service
 metadata:
@@ -67,4 +62,3 @@ spec:
       protocol: TCP
       port: 3306
       targetPort: 3306
-#End: Service
