@@ -22,7 +22,7 @@ temperatureDf = spark \
     .format("kafka") \
     .option("kafka.bootstrap.servers", kafkaBootstrap) \
     .option("subscribe", "de.kevinsieverding.supervizor.temperature") \
-    .option("startingOffsets", "earliest") \
+    .option("startingOffsets", "latest") \
     .option("failOnDataLoss", "false") \
     .load()
 
