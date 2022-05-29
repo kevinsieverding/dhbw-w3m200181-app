@@ -2,6 +2,8 @@ const express = require("express");
 const process = require("process");
 const { Kafka } = require("kafkajs");
 const mariadb = require("mariadb");
+const MemcachePlus = require("memcache-plus");
+const dns = require("dns").promises;
 
 // Catch interrupt signals to make the docker container killable via ctrl+c
 process.on("SIGNIT", () => {
@@ -23,6 +25,8 @@ const warningTypes = {
     code: "TEMPERATURE",
   },
 };
+
+const cacheTimeSecs = 5;
 
 // DATABASE
 
@@ -47,6 +51,53 @@ async function executeQuery(query, data) {
       connection.end();
     }
   }
+}
+
+// MEMCACHE
+
+let memcached = null;
+let memcachedServers = [];
+
+async function getMemcachedServersFromDns() {
+  try {
+    // Query all IP addresses for this hostname
+    let queryResult = await dns.lookup("my-memcached-service", {
+      all: true,
+    });
+
+    // Create IP:Port mappings
+    let servers = queryResult.map((el) => el.address + ":" + 11211);
+
+    // Check if the list of servers has changed
+    // and only create a new object if the server list has changed
+    if (memcachedServers.sort().toString() !== servers.sort().toString()) {
+      console.log("Updated memcached server list to ", servers);
+      memcachedServers = servers;
+
+      //Disconnect an existing client
+      if (memcached) {
+        await memcached.disconnect();
+      }
+
+      memcached = new MemcachePlus(memcachedServers);
+    }
+  } catch (e) {
+    console.log("Unable to get memcache servers", e);
+  }
+}
+
+getMemcachedServersFromDns();
+setInterval(() => getMemcachedServersFromDns(), 5000);
+
+//Get data from cache if a cache exists yet
+async function getFromCache(key) {
+  if (!memcached) {
+    console.log(
+      `No memcached instance available, memcachedServers = ${memcachedServers}`,
+    );
+    return null;
+  }
+  return await memcached.get(key);
 }
 
 // KAFKA
@@ -106,12 +157,57 @@ async function createWarning(warning) {
   );
 }
 
+const cacheKey = "warnings";
+
 async function findAllWarnings() {
-  return await executeQuery("SELECT * FROM warnings;");
+  const key = cacheKey;
+  let data = await getFromCache(key);
+
+  if (data) {
+    console.log(`Cache hit for key=${key}, cachedata = `, data);
+    return data;
+  }
+
+  console.log(`Cache miss for key=${key}, querying database`);
+
+  data = await executeQuery("SELECT * FROM warnings;");
+
+  if (data) {
+    console.log("Got result=", data, "storing in cache");
+    if (memcached) {
+      await memcached.set(key, data, cacheTimeSecs);
+      data.forEach(async (warning) => {
+        const id = warning[0];
+        console.log(`Caching ${key}-${id}:${warning}`);
+        await memcached.set(`${key}-${id}`, warning, cacheTimeSecs);
+      });
+    }
+  }
+
+  return data;
 }
 
 async function findWarning(id) {
-  return await executeQuery("SELECT * FROM warnings WHERE id = ?;", [id]);
+  const key = `${cacheKey}-${id}`;
+  let data = await getFromCache(key);
+
+  if (data) {
+    console.log(`Cache hit for key=${key}, cachedata = `, data);
+    return data;
+  }
+
+  console.log(`Cache miss for key=${key}, querying database`);
+
+  data = await executeQuery("SELECT * FROM warnings WHERE id = ?;", [id]);
+
+  if (data) {
+    console.log("Got result=", data, "storing in cache");
+    if (memcached) {
+      await memcached.set(key, data, cacheTimeSecs);
+    }
+  }
+
+  return data;
 }
 
 // WEBAPP
