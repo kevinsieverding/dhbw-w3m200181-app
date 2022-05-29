@@ -1,0 +1,70 @@
+#Begin: Configmap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mariadb-deployment-init-configmap
+data:
+  mariadb-init.sql: |
+    CREATE TABLE `warnings` (
+      `id`            MEDIUMINT     NOT NULL AUTO_INCREMENT,
+      `type`          VARCHAR(30)   NOT NULL,
+      `value`         DECIMAL(6,3)  NOT NULL,
+      `unitOfMeasure` VARCHAR(3)    NOT NULL,
+      `start`         TIMESTAMP     NOT NULL,
+      `end`           TIMESTAMP     NOT NULL,
+      PRIMARY KEY (`id`)
+    );
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mariadb-deployment
+  labels:
+    app: my-mariadb-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: my-mariadb
+  template:
+    metadata:
+      labels:
+        app: my-mariadb
+    spec:
+      # Mount the configmap volume
+      # This is an excerpt of deployment.spec.template.spec
+      volumes:
+        - name: init-volume
+          configMap:
+            name: mariadb-deployment-init-configmap
+      containers:
+        - name: my-mariadb
+          image: mariadb
+          volumeMounts:
+            - name: init-volume
+              mountPath: /docker-entrypoint-initdb.d/
+          # Set required environment variables to initialize the container
+          env:
+            - name: MARIADB_ROOT_PASSWORD
+              value: "mysecretpw"
+            - name: MARIADB_DATABASE
+              value: "supervizor"
+          ports:
+            - containerPort: 3306
+
+---
+#Begin: Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: my-app-mariadb-service
+spec:
+  selector:
+    app: my-mariadb
+  ports:
+    - name: mariadb-proto
+      protocol: TCP
+      port: 3306
+      targetPort: 3306
+#End: Service
