@@ -59,12 +59,6 @@ temperatureDf = temperatureDf.groupBy(
         "maxTemperature AS temperature"
 )
 
-consoleStream = temperatureDf \
-    .writeStream \
-    .trigger(processingTime=windowInterval) \
-    .format("console") \
-    .start()
-
 temperatureStream = temperatureDf \
     .selectExpr("start AS key", "to_json(struct(*)) AS value") \
     .writeStream \
