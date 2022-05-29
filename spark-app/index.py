@@ -3,8 +3,8 @@ from pyspark.sql.functions import *
 from pyspark.sql.types import (DecimalType, IntegerType, StringType,
                                StructType, TimestampType)
 
-windowDuration = "1 minute"
-windowInterval = "1 minute"
+windowDuration = "30 seconds"
+windowInterval = "30 seconds"
 
 spark = SparkSession.builder.appName("supervizor-spark").getOrCreate()
 
